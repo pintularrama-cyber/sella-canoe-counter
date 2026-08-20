@@ -17,7 +17,8 @@ CAMERA_ID = "k52QeyES"
 CSV_FILE = "canoas_sella.csv"
 
 # URL del servidor Flask (en local; luego pondremos la de Render)
-API_WEB_URL = "http://localhost:5001/api/canoa"
+# Pon aquí la URL de tu servicio en Render:
+API_WEB_URL = "https://sella-canoe-counter.onrender.com/api/canoa"
 
 # -------------------------------------------------------------
 # 1. ENVÍO DE DATOS A LA WEB EN SEGUNDO PLANO (HILOS)
