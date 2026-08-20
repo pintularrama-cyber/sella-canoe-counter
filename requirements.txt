@@ -1,5 +1,8 @@
+flask
+gunicorn
+requests
 ultralytics
-opencv-python
+opencv-python-headless
 supervision
 playwright
 matplotlib
