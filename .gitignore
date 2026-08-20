@@ -1,0 +1,19 @@
+# Entorno virtual de Python
+venv/
+env/
+.venv/
+
+# Modelos y pesos de YOLO (se descargan solos al ejecutar)
+*.pt
+*.onnx
+
+# Cache de Python y sistema Mac
+__pycache__/
+*.py[cod]
+.DS_Store
+
+# Archivos de salida de datos y gráficas locales
+canoas_sella.csv
+*.png
+*.mov
+*.mp4
