@@ -10,7 +10,7 @@ Sistema autónomo de visión artificial y telemetría en tiempo real para la mon
 
 ## 🛠️ Instalación rápida
 ```bash
-git clone https://github.com/TU_USUARIO/canoe-counter.git
+git clone https://github.com/pintularrama-cyber/canoe-counter.git
 cd canoe-counter
 python3 -m venv venv
 source venv/bin/activate

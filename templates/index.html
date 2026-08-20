@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canoe Counter Sella — Monitorización con Inteligencia Artificial</title>
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
+
+    <!-- HEADER / BARRA SUPERIOR -->
+    <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-40">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <span class="text-3xl">🛶</span>
+                <div>
+                    <h1 class="text-xl font-black text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 to-blue-500 tracking-tight">
+                        CANOE COUNTER SELLA
+                    </h1>
+                    <p class="text-xs text-slate-400 font-medium">Les Arriondes (Asturias) — Monitorización con Inteligencia Artificial</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3">
+                <!-- Indicador Live -->
+                <div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-full shadow-inner">
+                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">IA en Directo</span>
+                </div>
+
+                <!-- Botón Admin Reset -->
+                <button onclick="openResetModal()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-semibold transition-all">
+                    <span>⚙️</span> Reiniciar
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
+
+        <!-- TARJETAS DE MÉTRICAS -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+            
+            <!-- Tarjeta 1: Total Hoy -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-lg">
+                <div class="absolute -right-4 -bottom-4 text-7xl opacity-5 select-none">🛶</div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Canoas Hoy</p>
+                <h3 id="stat-total" class="text-5xl font-black text-cyan-400 mt-2 tracking-tight">0</h3>
+                <p class="text-xs text-slate-500 mt-2">Contadas individualmente por IA (valor orientativo)</p>
+            </div>
+
+            <!-- Tarjeta 2: Hora Punta -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-lg">
+                <div class="absolute -right-4 -bottom-4 text-7xl opacity-5 select-none">🔥</div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Hora Punta del Día</p>
+                <h3 id="stat-punta" class="text-2xl font-bold text-orange-400 mt-3">Calculando...</h3>
+                <p class="text-xs text-slate-500 mt-3">Franja de mayor concentración (5 min)</p>
+            </div>
+
+            <!-- Tarjeta 3: Punto de Control -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-lg">
+                <div class="absolute -right-4 -bottom-4 text-7xl opacity-5 select-none">📍</div>
+                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Punto de Control</p>
+                <h3 class="text-2xl font-bold text-slate-200 mt-3">Pozu "El Barcu" Rio Sella - Les Arriondes - Webcam gentileza de Jaire Aventura</h3>
+                <p class="text-xs text-slate-500 mt-3">Telemetría + Checkpoint en Vivo</p>
+            </div>
+        </div>
+
+        <!-- SECCIÓN PRINCIPAL DIVIDIDA: VÍDEO IA + GRÁFICA INTERACTIVA -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            
+            <!-- COLUMNA IZQUIERDA: REPRODUCTOR IA EN DIRECTO (6 Columnas) -->
+            <div class="lg:col-span-6 bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-col shadow-xl">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                        <span>📹</span> Señal Procesada con IA
+                    </h2>
+                    <span class="text-xs text-emerald-400 font-bold flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span> EMISIÓN EN VIVO
+                    </span>
+                </div>
+                <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-inner flex items-center justify-center">
+                    <img 
+                        src="{{ url_for('video_feed') }}" 
+                        class="w-full h-full object-cover" 
+                        alt="Streaming en directo procesado con IA">
+                </div>
+                <p class="text-xs text-slate-500 mt-3">
+                    ✨ Imágenes cortesía de Jaire Aventura en Pozu el Barcu (Río Sella), Les Arriondes.
+                </p>
+            </div>
+
+            <!-- COLUMNA DERECHA: GRÁFICA DE FLUJO CADA 5 MINUTOS (6 Columnas) -->
+            <div class="lg:col-span-6 bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-col shadow-xl">
+                <div class="flex items-center justify-between mb-3">
+                    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                        <span>📊</span> Flujo de Canoas (Bloques de 5 min)
+                    </h2>
+                    <span class="text-xs text-cyan-400 font-medium">Actualización en tiempo real</span>
+                </div>
+                <div class="relative w-full aspect-video min-h-[280px]">
+                    <canvas id="chartSella"></canvas>
+                </div>
+                <p class="text-xs text-slate-500 mt-3">
+                    Pasa el ratón sobre las barras para ver el número exacto de canoas en cada franja horaria.
+                </p>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- MODAL DE REINICIO DE ADMINISTRADOR -->
+    <div id="reset-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4">
+            <div class="flex items-center justify-between">
+                <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
+                    <span>⚠️</span> Reiniciar Contador
+                </h3>
+                <button onclick="closeResetModal()" class="text-slate-400 hover:text-slate-200 text-lg">&times;</button>
+            </div>
+            
+            <p class="text-xs text-slate-400">
+                Esta acción pondrá a 0 el marcador y vaciará los datos de hoy. Introduce las credenciales de administrador:
+            </p>
+
+            <div class="space-y-3">
+                <div>
+                    <label class="text-[11px] font-bold uppercase text-slate-400">Usuario</label>
+                    <input id="admin-user" type="text" placeholder="user" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500 mt-1">
+                </div>
+                <div>
+                    <label class="text-[11px] font-bold uppercase text-slate-400">Contraseña</label>
+                    <input id="admin-pass" type="password" placeholder="••••" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500 mt-1">
+                </div>
+            </div>
+
+            <div id="modal-error" class="text-xs text-rose-400 font-semibold hidden"></div>
+
+            <div class="flex gap-2 pt-2">
+                <button onclick="closeResetModal()" class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg text-xs font-bold transition-all">
+                    Cancelar
+                </button>
+                <button onclick="submitReset()" class="w-1/2 bg-rose-600 hover:bg-rose-500 text-white py-2 rounded-lg text-xs font-bold shadow-lg shadow-rose-600/30 transition-all">
+                    Confirmar Reset
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FOOTER -->
+    <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
+        <p>Canoe Counter Sella — Desarrollado en Python con YOLOv8, OpenCV, Supervision y Flask.</p>
+        <p class="mt-1">Arriondas, Asturias.</p>
+    </footer>
+
+    <!-- SCRIPT DE ACTUALIZACIÓN EN TIEMPO REAL (CHART.JS) -->
+    <script>
+        let chartInstance = null;
+
+        function initChart() {
+            const ctx = document.getElementById('chartSella').getContext('2d');
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Canoas / 5 min',
+                        data: [],
+                        backgroundColor: '#0ea5e9',
+                        hoverBackgroundColor: '#38bdf8',
+                        borderRadius: 6,
+                        borderSkipped: false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 500 },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#0f172a',
+                            titleColor: '#f8fafc',
+                            bodyColor: '#38bdf8',
+                            borderColor: '#334155',
+                            borderWidth: 1,
+                            padding: 10,
+                            displayColors: false,
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y + ' canoas';
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { color: '#64748b', font: { size: 10 }, maxRotation: 45, minRotation: 45 }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#1e293b', borderDash: [4, 4] },
+                            ticks: { color: '#64748b', stepSize: 2, precision: 0 }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function fetchStats() {
+            try {
+                const res = await fetch('/api/stats');
+                const data = await res.json();
+
+                document.getElementById('stat-total').innerText = data.total_hoy;
+                document.getElementById('stat-punta').innerText = data.hora_punta;
+
+                if (chartInstance) {
+                    chartInstance.data.labels = data.tramos;
+                    chartInstance.data.datasets[0].data = data.conteos;
+                    chartInstance.update('none');
+                }
+            } catch (err) {
+                console.error("Error al obtener estadísticas:", err);
+            }
+        }
+
+        // CONTROL DEL MODAL DE RESET
+        function openResetModal() {
+            document.getElementById('reset-modal').classList.remove('hidden');
+            document.getElementById('modal-error').classList.add('hidden');
+            document.getElementById('admin-user').value = '';
+            document.getElementById('admin-pass').value = '';
+        }
+
+        function closeResetModal() {
+            document.getElementById('reset-modal').classList.add('hidden');
+        }
+
+        async function submitReset() {
+            const user = document.getElementById('admin-user').value;
+            const pass = document.getElementById('admin-pass').value;
+            const errorDiv = document.getElementById('modal-error');
+
+            try {
+                const res = await fetch('/api/reset', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user, password: pass })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    closeResetModal();
+                    fetchStats(); // Refrescar métricas a 0 inmediatamente
+                } else {
+                    errorDiv.innerText = data.message || 'Error de autenticación';
+                    errorDiv.classList.remove('hidden');
+                }
+            } catch (err) {
+                errorDiv.innerText = 'Error de conexión con el servidor';
+                errorDiv.classList.remove('hidden');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initChart();
+            fetchStats();
+            setInterval(fetchStats, 5000);
+        });
+    </script>
+</body>
+</html>
