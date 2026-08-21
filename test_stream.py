@@ -315,7 +315,7 @@ MAIN_X2 = 0.96
 MAIN_Y1 = 0.15
 MAIN_Y2 = 0.99
 
-RIVER_X1 = 0.35   # Checkpoint Amarillo
+RIVER_X1 = 0.38   # Checkpoint Amarillo
 RIVER_X2 = 0.56
 RIVER_Y1 = 0.81
 RIVER_Y2 = 0.99
