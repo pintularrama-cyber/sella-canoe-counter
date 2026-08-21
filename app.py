@@ -1,5 +1,5 @@
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 from flask import Flask, render_template, request, jsonify
 
@@ -32,7 +32,7 @@ def index():
     return render_template("index.html")
 
 # -------------------------------------------------------------
-# 3. API: RECIBIR CANOA DESDE TU MAC MINI
+# 3. API: RECIBIR CANOA
 # -------------------------------------------------------------
 @app.route("/api/canoa", methods=["POST"])
 def registrar_canoa():
@@ -51,11 +51,12 @@ def registrar_canoa():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 # -------------------------------------------------------------
-# 4. API: ESTADÍSTICAS EN TIEMPO REAL (BLOQUES DE 5 MIN)
+# 4. API: ESTADÍSTICAS + SISMÓGRAFO 4 HORAS
 # -------------------------------------------------------------
 @app.route("/api/stats")
 def obtener_estadisticas():
-    hoy_str = datetime.now().strftime("%Y-%m-%d")
+    now = datetime.now()
+    hoy_str = now.strftime("%Y-%m-%d")
     
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
@@ -64,10 +65,11 @@ def obtener_estadisticas():
     conn.close()
 
     total_hoy = len(rows)
-    intervalos = defaultdict(int)
+    timestamps_hoy = [datetime.strptime(r[0], "%Y-%m-%d %H:%M:%S") for r in rows]
 
-    for row in rows:
-        dt = datetime.strptime(row[0], "%Y-%m-%d %H:%M:%S")
+    # 1. Agrupación por tramos de 5 min (Gráfica de barras)
+    intervalos = defaultdict(int)
+    for dt in timestamps_hoy:
         bloque_min = (dt.minute // 5) * 5
         fin_min = bloque_min + 4
         etiqueta = f"{dt.hour:02d}:{bloque_min:02d}-{dt.hour:02d}:{fin_min:02d}"
@@ -81,15 +83,40 @@ def obtener_estadisticas():
         max_canoas = max(conteos)
         hora_punta = f"{tramos[conteos.index(max_canoas)]} ({max_canoas} canoas)"
 
+    # 2. Datos del Sismógrafo (48 bloques de 5 min = 4 Horas)
+    num_slots = 48
+    minutos_por_slot = 5
+    sismografo_conteos = [0] * num_slots
+    sismografo_labels = [""] * num_slots
+
+    for i in range(num_slots):
+        t_inicio = now - timedelta(minutes=(num_slots - i) * minutos_por_slot)
+        t_fin = now - timedelta(minutes=(num_slots - i - 1) * minutos_por_slot)
+        sismografo_conteos[i] = sum(1 for t in timestamps_hoy if t_inicio <= t < t_fin)
+        
+        # Etiquetas guía: -4h, -3h, -2h, -1h, Ahora
+        if i == 0:
+            sismografo_labels[i] = "-4h"
+        elif i == 12:
+            sismografo_labels[i] = "-3h"
+        elif i == 24:
+            sismografo_labels[i] = "-2h"
+        elif i == 36:
+            sismografo_labels[i] = "-1h"
+        elif i == num_slots - 1:
+            sismografo_labels[i] = "Ahora"
+
     return jsonify({
         "total_hoy": total_hoy,
         "hora_punta": hora_punta,
         "tramos": tramos,
-        "conteos": conteos
+        "conteos": conteos,
+        "sismografo_labels": sismografo_labels,
+        "sismografo_conteos": sismografo_conteos
     })
 
 # -------------------------------------------------------------
-# 5. API: REINICIAR CONTADOR (ADMIN / ADMIN)
+# 5. API: REINICIAR CONTADOR (ADMIN / ARRIONDAS)
 # -------------------------------------------------------------
 @app.route("/api/reset", methods=["POST"])
 def reset_counter():
@@ -97,7 +124,8 @@ def reset_counter():
     username = data.get("username")
     password = data.get("password")
 
-    if username == "admin" and password == "admin":
+    # NUEVA CONTRASEÑA: arriondas
+    if username == "admin" and password == "arriondas":
         hoy_str = datetime.now().strftime("%Y-%m-%d")
         conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
