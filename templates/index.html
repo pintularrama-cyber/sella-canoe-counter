@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Canoe Counter Sella — Monitorización en Vivo</title>
+    <title>Canoe Counter Sella — Monitorización & Histórico</title>
     <!-- TailwindCSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Chart.js CDN -->
@@ -11,7 +11,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
 
-    <!-- HEADER -->
+    <!-- HEADER CON PESTAÑAS -->
     <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
             <div class="flex items-center gap-3">
@@ -24,14 +24,19 @@
                 </div>
             </div>
             
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 rounded-full shadow-inner">
-                    <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider">IA en Directo</span>
-                </div>
+            <!-- SELECTOR DE PESTAÑAS -->
+            <div class="flex items-center gap-2 bg-slate-950/80 p-1.5 rounded-xl border border-slate-800">
+                <button id="tab-btn-live" onclick="switchTab('live')" class="px-4 py-2 rounded-lg text-xs font-bold transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg">
+                    🔴 En Directo
+                </button>
+                <button id="tab-btn-history" onclick="switchTab('history')" class="px-4 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-all">
+                    📊 Histórico & Récords
+                </button>
+            </div>
 
+            <div class="flex items-center gap-3">
                 <button onclick="openResetModal()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 px-3 py-1.5 rounded-full text-xs font-semibold transition-all">
-                    <span>⚙️</span> Reiniciar
+                    <span>⚙️</span> Admin
                 </button>
             </div>
         </div>
@@ -39,107 +44,133 @@
 
     <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
 
-        <!-- TARJETAS DE MÉTRICAS -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-lg">
-                <div class="absolute -right-4 -bottom-4 text-7xl opacity-5 select-none">🛶</div>
-                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Canoas Hoy</p>
-                <h3 id="stat-total" class="text-5xl font-black text-cyan-400 mt-2 tracking-tight">0</h3>
-                <p class="text-xs text-slate-500 mt-2">Contadas individualmente por IA</p>
+        <!-- ============================================================= -->
+        <!-- PESTAÑA 1: EN DIRECTO (VISTA HOY) -->
+        <!-- ============================================================= -->
+        <div id="view-live" class="space-y-8">
+            <!-- TARJETAS DE MÉTRICAS HOY -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-lg">
+                    <div class="absolute -right-4 -bottom-4 text-7xl opacity-5 select-none">🛶</div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Canoas Hoy</p>
+                    <h3 id="stat-total" class="text-5xl font-black text-cyan-400 mt-2 tracking-tight">0</h3>
+                    <p class="text-xs text-slate-500 mt-2">Reinicio automático a las 23:59h</p>
+                </div>
+
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-lg">
+                    <div class="absolute -right-4 -bottom-4 text-7xl opacity-5 select-none">🔥</div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Hora Punta de Hoy</p>
+                    <h3 id="stat-punta" class="text-2xl font-bold text-orange-400 mt-3">Calculando...</h3>
+                    <p class="text-xs text-slate-500 mt-3">Franja de mayor concentración (5 min)</p>
+                </div>
+
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-lg">
+                    <div class="absolute -right-4 -bottom-4 text-7xl opacity-5 select-none">📍</div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Punto de Control</p>
+                    <h3 class="text-2xl font-bold text-slate-200 mt-3">Arriondas (Río Sella)</h3>
+                    <p class="text-xs text-slate-500 mt-3">Cámara Panorámica HD en Directo</p>
+                </div>
             </div>
 
-            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-lg">
-                <div class="absolute -right-4 -bottom-4 text-7xl opacity-5 select-none">🔥</div>
-                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Hora Punta del Día</p>
-                <h3 id="stat-punta" class="text-2xl font-bold text-orange-400 mt-3">Calculando...</h3>
-                <p class="text-xs text-slate-500 mt-3">Franja de mayor concentración (5 min)</p>
-            </div>
+            <!-- SECCIÓN PRINCIPAL: WEBCAM + GRÁFICAS HOY -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                <div class="lg:col-span-6 bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-col shadow-xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                            <span>📹</span> Señal del Río Sella en Directo
+                        </h2>
+                        <span class="text-xs text-emerald-400 font-bold flex items-center gap-1.5">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> EN VIVO
+                        </span>
+                    </div>
+                    <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-inner flex items-center justify-center">
+                        <iframe src="https://rtsp.me/embed/k52QeyES/" frameborder="0" allowfullscreen class="w-full h-full object-cover"></iframe>
+                    </div>
+                    <p class="text-xs text-slate-500 mt-3">🛰️ Emisión oficial de Arriondas sincronizada con IA.</p>
+                </div>
 
-            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-lg">
-                <div class="absolute -right-4 -bottom-4 text-7xl opacity-5 select-none">📍</div>
-                <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Punto de Control</p>
-                <h3 class="text-2xl font-bold text-slate-200 mt-3">Arriondas (Río Sella)</h3>
-                <p class="text-xs text-slate-500 mt-3">Cámara Panorámica HD en Directo</p>
+                <div class="lg:col-span-6 space-y-6">
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-col shadow-xl">
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                                <span>📈</span> Sismógrafo de Flujo (Últimas 4 Horas)
+                            </h2>
+                            <span class="text-xs text-rose-400 font-bold flex items-center gap-1">
+                                <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> EN VIVO
+                            </span>
+                        </div>
+                        <div class="relative w-full h-[140px]">
+                            <canvas id="chartSismografo"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-col shadow-xl">
+                        <div class="flex items-center justify-between mb-2">
+                            <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                                <span>📊</span> Distribución de Hoy (Bloques de 5 min)
+                            </h2>
+                            <span class="text-xs text-cyan-400 font-medium">Actualización automática</span>
+                        </div>
+                        <div class="relative w-full h-[180px]">
+                            <canvas id="chartSella"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- SECCIÓN PRINCIPAL: WEBCAM + GRÁFICAS -->
-        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
-            <!-- COLUMNA IZQUIERDA: WEBCAM HD (6 Columnas) -->
-            <div class="lg:col-span-6 bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-col shadow-xl">
-                <div class="flex items-center justify-between mb-3">
+        <!-- ============================================================= -->
+        <!-- PESTAÑA 2: HISTÓRICO Y RÉCORDS -->
+        <!-- ============================================================= -->
+        <div id="view-history" class="space-y-8 hidden">
+            <!-- TARJETAS DE RÉCORDS Y ACUMULADOS -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-lg">
+                    <div class="absolute -right-4 -bottom-4 text-7xl opacity-5 select-none">🏆</div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-amber-400">Día Récord Histórico</p>
+                    <h3 id="stat-record" class="text-2xl font-black text-amber-300 mt-3">Sin datos</h3>
+                    <p class="text-xs text-slate-500 mt-2">Mayor afluencia registrada en un día</p>
+                </div>
+
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-lg">
+                    <div class="absolute -right-4 -bottom-4 text-7xl opacity-5 select-none">📅</div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Acumulado Este Mes</p>
+                    <h3 id="stat-mes" class="text-4xl font-black text-cyan-400 mt-2">0</h3>
+                    <p class="text-xs text-slate-500 mt-2">Canoas contadas en el mes en curso</p>
+                </div>
+
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-lg">
+                    <div class="absolute -right-4 -bottom-4 text-7xl opacity-5 select-none">🌟</div>
+                    <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Acumulado Temporada (Año)</p>
+                    <h3 id="stat-ano" class="text-4xl font-black text-blue-400 mt-2">0</h3>
+                    <p class="text-xs text-slate-500 mt-2">Total acumulado del año actual</p>
+                </div>
+            </div>
+
+            <!-- GRÁFICA DE EVOLUCIÓN DÍA A DÍA -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl">
+                <div class="flex items-center justify-between mb-4">
                     <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                        <span>📹</span> Señal del Río Sella en Directo
+                        <span>📈</span> Evolución de Canoas Día a Día
                     </h2>
-                    <span class="text-xs text-emerald-400 font-bold flex items-center gap-1.5">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span> EN VIVO
-                    </span>
+                    <span class="text-xs text-slate-500">Histórico completo</span>
                 </div>
-                <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-inner flex items-center justify-center">
-                    <iframe 
-                        src="https://rtsp.me/embed/k52QeyES/" 
-                        frameborder="0" 
-                        allowfullscreen 
-                        class="w-full h-full object-cover">
-                    </iframe>
+                <div class="relative w-full h-[320px]">
+                    <canvas id="chartHistory"></canvas>
                 </div>
-                <p class="text-xs text-slate-500 mt-3">
-                    🛰️ Imágenes cortesía de Jaire Aventura.
-                </p>
             </div>
-
-            <!-- COLUMNA DERECHA: SISMÓGRAFO + GRÁFICA HISTÓRICA (6 Columnas) -->
-            <div class="lg:col-span-6 space-y-6">
-                
-                <!-- SISMÓGRAFO EN VIVO (ÚLTIMAS 4 HORAS) -->
-                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-col shadow-xl">
-                    <div class="flex items-center justify-between mb-2">
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                            <span>📈</span> Sismógrafo de Flujo (Últimas 4 Horas)
-                        </h2>
-                        <span class="text-xs text-rose-400 font-bold flex items-center gap-1">
-                            <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span> PULSO EN VIVO
-                        </span>
-                    </div>
-                    <div class="relative w-full h-[140px]">
-                        <canvas id="chartSismografo"></canvas>
-                    </div>
-                </div>
-
-                <!-- GRÁFICA DE FLUJO CADA 5 MINUTOS -->
-                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-col shadow-xl">
-                    <div class="flex items-center justify-between mb-2">
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                            <span>📊</span> Distribución del Día (Bloques de 5 min)
-                        </h2>
-                        <span class="text-xs text-cyan-400 font-medium">Actualización automática</span>
-                    </div>
-                    <div class="relative w-full h-[180px]">
-                        <canvas id="chartSella"></canvas>
-                    </div>
-                </div>
-
-            </div>
-
         </div>
 
     </main>
 
-    <!-- MODAL DE REINICIO DE ADMINISTRADOR -->
+    <!-- MODAL ADMIN -->
     <div id="reset-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
         <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4">
             <div class="flex items-center justify-between">
-                <h3 class="text-base font-bold text-slate-100 flex items-center gap-2">
-                    <span>⚠️</span> Reiniciar Contador
-                </h3>
+                <h3 class="text-base font-bold text-slate-100 flex items-center gap-2"><span>⚠️</span> Reiniciar Contador de Hoy</h3>
                 <button onclick="closeResetModal()" class="text-slate-400 hover:text-slate-200 text-lg">&times;</button>
             </div>
-            
-            <p class="text-xs text-slate-400">
-                Esta acción pondrá a 0 el marcador de hoy. Introduce las credenciales de administrador:
-            </p>
-
+            <p class="text-xs text-slate-400">Pone a 0 el marcador de hoy sin borrar el histórico de días anteriores:</p>
             <div class="space-y-3">
                 <div>
                     <label class="text-[11px] font-bold uppercase text-slate-400">Usuario</label>
@@ -150,89 +181,49 @@
                     <input id="admin-pass" type="password" placeholder="arriondas" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500 mt-1">
                 </div>
             </div>
-
             <div id="modal-error" class="text-xs text-rose-400 font-semibold hidden"></div>
-
             <div class="flex gap-2 pt-2">
-                <button onclick="closeResetModal()" class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg text-xs font-bold transition-all">
-                    Cancelar
-                </button>
-                <button onclick="submitReset()" class="w-1/2 bg-rose-600 hover:bg-rose-500 text-white py-2 rounded-lg text-xs font-bold shadow-lg shadow-rose-600/30 transition-all">
-                    Confirmar Reset
-                </button>
+                <button onclick="closeResetModal()" class="w-1/2 bg-slate-800 hover:bg-slate-700 text-slate-300 py-2 rounded-lg text-xs font-bold transition-all">Cancelar</button>
+                <button onclick="submitReset()" class="w-1/2 bg-rose-600 hover:bg-rose-500 text-white py-2 rounded-lg text-xs font-bold shadow-lg shadow-rose-600/30 transition-all">Confirmar Reset</button>
             </div>
         </div>
     </div>
 
     <!-- FOOTER -->
     <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
-        <p>Canoe Counter Sella — Monitorización con Inteligencia Artificial.</p>
+        <p>Canoe Counter Sella — Plataforma de Monitorización Fluvial.</p>
         <p class="mt-1">Arriondas, Asturias.</p>
     </footer>
 
-    <!-- SCRIPT DE ACTUALIZACIÓN EN TIEMPO REAL (CHART.JS) -->
+    <!-- CHART.JS & CONTROLADORES -->
     <script>
         let chartInstance = null;
         let sismografoInstance = null;
+        let chartHistoryInstance = null;
 
         function initCharts() {
-            // 1. Gráfica de Barras Histórica (Azul)
+            // 1. Barras de Hoy
             const ctxBars = document.getElementById('chartSella').getContext('2d');
             chartInstance = new Chart(ctxBars, {
                 type: 'bar',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Canoas / 5 min',
-                        data: [],
-                        backgroundColor: '#0ea5e9',
-                        hoverBackgroundColor: '#38bdf8',
-                        borderRadius: 4,
-                        borderSkipped: false
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 400 },
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 45, minRotation: 45 } },
-                        y: { beginAtZero: true, grid: { color: '#1e293b', borderDash: [4, 4] }, ticks: { color: '#64748b', stepSize: 2, precision: 0 } }
-                    }
-                }
+                data: { labels: [], datasets: [{ label: 'Canoas / 5 min', data: [], backgroundColor: '#0ea5e9', borderRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#64748b', font: { size: 9 }, maxRotation: 45 } }, y: { beginAtZero: true, grid: { color: '#1e293b' }, ticks: { color: '#64748b', stepSize: 2 } } } }
             });
 
-            // 2. Sismógrafo en Vivo (Línea Roja con Sombra)
+            // 2. Sismógrafo 4H
             const ctxSismo = document.getElementById('chartSismografo').getContext('2d');
             sismografoInstance = new Chart(ctxSismo, {
                 type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Ritmo / 5 min',
-                        data: [],
-                        borderColor: '#ef4444',
-                        borderWidth: 2.5,
-                        backgroundColor: 'rgba(239, 68, 68, 0.15)',
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: (ctx) => (ctx.dataIndex === ctx.dataset.data.length - 1 ? 5 : 0),
-                        pointBackgroundColor: '#ef4444',
-                        pointBorderColor: '#ffffff',
-                        pointBorderWidth: 1.5
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    animation: { duration: 400 },
-                    plugins: { legend: { display: false } },
-                    scales: {
-                        x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, weight: 'bold' }, autoSkip: false } },
-                        y: { beginAtZero: true, grid: { color: '#1e293b', borderDash: [4, 4] }, ticks: { color: '#64748b', stepSize: 2, precision: 0 } }
-                    }
-                }
+                data: { labels: Array(48).fill(''), datasets: [{ label: 'Ritmo', data: Array(48).fill(0), borderColor: '#ef4444', borderWidth: 2.5, backgroundColor: 'rgba(239, 68, 68, 0.20)', fill: true, tension: 0.35, pointRadius: 0 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, weight: 'bold' }, maxRotation: 0, callback: (v, i) => [0,12,24,36,47].includes(i) ? ['-4h','-3h','-2h','-1h','Ahora'][[0,12,24,36,47].indexOf(i)] : '' } }, y: { beginAtZero: true, suggestedMax: 3, grid: { color: '#1e293b' }, ticks: { color: '#64748b', stepSize: 1 } } } }
+            });
+
+            // 3. Gráfica Histórica Día a Día
+            const ctxHist = document.getElementById('chartHistory').getContext('2d');
+            chartHistoryInstance = new Chart(ctxHist, {
+                type: 'bar',
+                data: { labels: [], datasets: [{ label: 'Total Canoas', data: [], backgroundColor: '#3b82f6', hoverBackgroundColor: '#60a5fa', borderRadius: 6 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#94a3b8' } }, y: { beginAtZero: true, grid: { color: '#1e293b' }, ticks: { color: '#64748b' } } } }
             });
         }
 
@@ -241,6 +232,7 @@
                 const res = await fetch('/api/stats');
                 const data = await res.json();
 
+                // Datos de Hoy
                 document.getElementById('stat-total').innerText = data.total_hoy;
                 document.getElementById('stat-punta').innerText = data.hora_punta;
 
@@ -251,25 +243,46 @@
                 }
 
                 if (sismografoInstance) {
-                    sismografoInstance.data.labels = data.sismografo_labels;
                     sismografoInstance.data.datasets[0].data = data.sismografo_conteos;
                     sismografoInstance.update('none');
                 }
+
+                // Datos Históricos
+                document.getElementById('stat-record').innerText = data.record_dia;
+                document.getElementById('stat-mes').innerText = data.total_mes;
+                document.getElementById('stat-ano').innerText = data.total_ano;
+
+                if (chartHistoryInstance) {
+                    chartHistoryInstance.data.labels = data.hist_dias;
+                    chartHistoryInstance.data.datasets[0].data = data.hist_totales;
+                    chartHistoryInstance.update('none');
+                }
             } catch (err) {
-                console.error("Error al obtener estadísticas:", err);
+                console.error("Error al actualizar estadísticas:", err);
             }
         }
 
-        function openResetModal() {
-            document.getElementById('reset-modal').classList.remove('hidden');
-            document.getElementById('modal-error').classList.add('hidden');
-            document.getElementById('admin-user').value = '';
-            document.getElementById('admin-pass').value = '';
+        function switchTab(tab) {
+            const liveView = document.getElementById('view-live');
+            const histView = document.getElementById('view-history');
+            const liveBtn = document.getElementById('tab-btn-live');
+            const histBtn = document.getElementById('tab-btn-history');
+
+            if (tab === 'live') {
+                liveView.classList.remove('hidden');
+                histView.classList.add('hidden');
+                liveBtn.className = "px-4 py-2 rounded-lg text-xs font-bold transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg";
+                histBtn.className = "px-4 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-all";
+            } else {
+                liveView.classList.add('hidden');
+                histView.classList.remove('hidden');
+                histBtn.className = "px-4 py-2 rounded-lg text-xs font-bold transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg";
+                liveBtn.className = "px-4 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-all";
+            }
         }
 
-        function closeResetModal() {
-            document.getElementById('reset-modal').classList.add('hidden');
-        }
+        function openResetModal() { document.getElementById('reset-modal').classList.remove('hidden'); }
+        function closeResetModal() { document.getElementById('reset-modal').classList.add('hidden'); }
 
         async function submitReset() {
             const user = document.getElementById('admin-user').value;
@@ -282,9 +295,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ username: user, password: pass })
                 });
-
                 const data = await res.json();
-
                 if (res.ok) {
                     closeResetModal();
                     fetchStats();
@@ -293,7 +304,7 @@
                     errorDiv.classList.remove('hidden');
                 }
             } catch (err) {
-                errorDiv.innerText = 'Error al conectar con el servidor';
+                errorDiv.innerText = 'Error al conectar';
                 errorDiv.classList.remove('hidden');
             }
         }
