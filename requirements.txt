@@ -8,3 +8,4 @@ playwright
 matplotlib
 torch
 numpy
+psycopg2-binary
