@@ -2,6 +2,7 @@ import os
 import re
 import csv
 import math
+import time
 import cv2
 import torch
 import requests
@@ -16,20 +17,19 @@ from ultralytics import YOLO
 CAMERA_ID = "k52QeyES"
 CSV_FILE = "canoas_sella.csv"
 
-# URL del servidor Flask (en local; luego pondremos la de Render)
-# Pon aquí la URL de tu servicio en Render:
+# URL pública de tu servicio en Render (cámbiala si tu nombre es distinto)
 API_WEB_URL = "https://sella-canoe-counter.onrender.com/api/canoa"
 
 # -------------------------------------------------------------
-# 1. ENVÍO DE DATOS A LA WEB EN SEGUNDO PLANO (HILOS)
+# 1. ENVÍO EN SEGUNDO PLANO A LA WEB (RENDER)
 # -------------------------------------------------------------
 def enviar_canoa_a_la_web(canoe_id, timestamp_str):
-    """Envía la canoa a Flask en un hilo independiente para no frenar la IA"""
+    """Envía la canoa a Render en un hilo secundario para no frenar la IA"""
     def _enviar():
         try:
             requests.post(API_WEB_URL, json={"canoe_id": canoe_id, "timestamp": timestamp_str}, timeout=2)
         except Exception:
-            pass  # Si la web está apagada, no interrumpe el procesamiento del vídeo
+            pass
     threading.Thread(target=_enviar, daemon=True).start()
 
 # -------------------------------------------------------------
@@ -172,7 +172,6 @@ def generar_grafica_5min(csv_path, session_start):
 def get_authenticated_stream_url(camera_id):
     embed_url = f"https://rtsp.me/embed/{camera_id}/"
     captured_url = None
-    print("🤖 Conectando señal de Arriondas...")
 
     with sync_playwright() as p:
         browser = p.chromium.launch(
@@ -180,7 +179,7 @@ def get_authenticated_stream_url(camera_id):
             args=["--autoplay-policy=no-user-gesture-required", "--no-sandbox", "--disable-web-security"]
         )
         context = browser.new_context(
-            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+            user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36"
         )
         page = context.new_page()
 
@@ -207,10 +206,7 @@ def get_authenticated_stream_url(camera_id):
         finally:
             browser.close()
 
-    if captured_url:
-        print("✅ ¡Señal de vídeo lista!")
-        return captured_url
-    return None
+    return captured_url
 
 # =====================================================================
 # 5. TRACKER CHECKPOINT
@@ -315,7 +311,8 @@ MAIN_X2 = 0.96
 MAIN_Y1 = 0.15
 MAIN_Y2 = 0.99
 
-RIVER_X1 = 0.38   # Checkpoint Amarillo
+# Checkpoint ajustado para evitar el saliente de la derecha
+RIVER_X1 = 0.35   
 RIVER_X2 = 0.56
 RIVER_Y1 = 0.81
 RIVER_Y2 = 0.99
@@ -328,15 +325,17 @@ def main():
     start_time_str = session_start.strftime("%H:%M:%S")
 
     device = "mps" if torch.backends.mps.is_available() else "cpu"
-    print(f"🚀 Canoe Counter Arriondas [GPU: {device.upper()}] — Modo Web Conectado")
+    print(f"🚀 Canoe Counter Arriondas [GPU: {device.upper()}] — Modo Continuo 24/7")
 
     if not os.path.exists(CSV_FILE):
         with open(CSV_FILE, mode="w", newline="", encoding="utf-8") as f:
             writer = csv.writer(f)
             writer.writerow(["Timestamp", "Canoa_ID"])
 
+    print("🤖 Conectando señal de Arriondas...")
     stream_url = get_authenticated_stream_url(CAMERA_ID)
     if not stream_url:
+        print("❌ Error al obtener señal inicial.")
         return
 
     model = YOLO("yolov8s.pt")
@@ -363,7 +362,6 @@ def main():
     rel_rx2 = rx2 - mx1
     rel_ry2 = ry2 - my1
 
-    # Coordenadas del Sismógrafo en el Cielo
     sky_x = int(main_w * 0.12)
     sky_y = int(main_h * 0.03)
     sky_w = int(main_w * 0.38)
@@ -374,21 +372,43 @@ def main():
     total_canoas = 0
     canoe_timestamps = []
 
-    print(f"🟢 SESIÓN INICIADA [{start_time_str}]. Pulsa 'q' para finalizar.")
+    print(f"🟢 SESIÓN INICIADA [{start_time_str}]. Pulsa 'q' para salir.")
 
     while True:
         ret, frame = cap.read()
+
+        # -------------------------------------------------------------
+        # AUTO-RECUPERACIÓN BLINDADA ANTE CORTES DE RED / STREAM
+        # -------------------------------------------------------------
         if not ret:
-            print("⚠️ Reconectando señal del Sella...")
-            stream_url = get_authenticated_stream_url(CAMERA_ID)
-            if stream_url:
-                cap = cv2.VideoCapture(stream_url)
-                continue
-            else:
-                break
+            print("⚠️ Corte en la emisión del Sella. Reintentando conexión...")
+            cap.release()
+            
+            reconectado = False
+            while not reconectado:
+                time.sleep(5)
+                print("🔄 Intentando cazar nueva señal...")
+                stream_url = get_authenticated_stream_url(CAMERA_ID)
+                if stream_url:
+                    cap = cv2.VideoCapture(stream_url)
+                    if cap.isOpened():
+                        ret_test, _ = cap.read()
+                        if ret_test:
+                            print("✅ ¡Señal del Sella restablecida!")
+                            reconectado = True
+            continue
 
         roi_river = frame[ry1:ry2, rx1:rx2].copy()
         now = datetime.now()
+
+        # COMPROBACIÓN DE CAMBIO DE DÍA (REINICIO A MEDIANOCHE)
+        if now.strftime("%d/%m/%Y") != fecha_hoy_str:
+            fecha_hoy_str = now.strftime("%d/%m/%Y")
+            start_time_str = now.strftime("%H:%M:%S")
+            total_canoas = 0
+            canoe_timestamps.clear()
+            tracker.counted.clear()
+            print(f"\n🌅 ¡Nuevo día detectado ({fecha_hoy_str})! Contador puesto a 0.")
 
         results = model.predict(
             source=roi_river,
@@ -402,7 +422,6 @@ def main():
         raw_boxes = results.boxes.xyxy.cpu().numpy()
         confidences = results.boxes.conf.cpu().numpy()
         
-        # Fusión NMS
         nms_boxes = []
         nms_scores = []
         for box, conf in zip(raw_boxes, confidences):
@@ -436,7 +455,7 @@ def main():
                     writer = csv.writer(f)
                     writer.writerow([timestamp_str, obj_id])
 
-                # 2. ENVIAR A LA WEB FLASK EN SEGUNDO PLANO
+                # 2. Enviar a Render
                 enviar_canoa_a_la_web(obj_id, timestamp_str)
 
                 print(f"🛶 [{now.strftime('%H:%M:%S')}] ¡Canoa #{obj_id} contada! Total: {total_canoas}")
@@ -456,7 +475,7 @@ def main():
         cv2.putText(display_frame, "CHECKPOINT IA", (rel_rx1 + 8, rel_ry1 + 22),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.55, (0, 255, 255), 2)
 
-        # Inset PiP: Zoom Grande en esquina inferior izquierda
+        # Inset PiP: Zoom Grande
         pip_w = 480
         pip_h = int(pip_w * (crop_h / crop_w))
         roi_resized = cv2.resize(roi_river, (pip_w, pip_h))
@@ -469,9 +488,7 @@ def main():
         cv2.putText(display_frame, "ZOOM CHECKPOINT IA", (pip_x + 10, pip_y - 10),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.60, (0, 255, 0), 2)
 
-        # ---------------------------------------------------------
-        # PANEL DE CONTEO LIMPIO (SUPERIOR DERECHO)
-        # ---------------------------------------------------------
+        # Panel de conteo superior derecho
         panel_w, panel_h = 260, 75
         px1, py1 = main_w - panel_w - 20, 20
         px2, py2 = main_w - 20, py1 + panel_h
@@ -484,7 +501,7 @@ def main():
         cv2.putText(display_frame, f"{fecha_hoy_str} | Inicio: {start_time_str}", 
                     (px1 + 15, py1 + 60), cv2.FONT_HERSHEY_SIMPLEX, 0.44, (180, 180, 180), 1)
 
-        # Sismógrafo en el Cielo (Recuadro Verde)
+        # Sismógrafo en el Cielo
         dibujar_sismografo_cielo(display_frame, canoe_timestamps, sky_x, sky_y, sky_w, sky_h)
 
         # Mostrar escena
