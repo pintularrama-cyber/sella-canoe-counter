@@ -5,22 +5,20 @@ import psycopg2
 import sqlite3
 from datetime import datetime, timedelta
 from collections import defaultdict
+from zoneinfo import ZoneInfo
 from flask import Flask, render_template, request, jsonify
 
 app = Flask(__name__)
 
-# URL de la base de datos en la nube (de Render / Neon) o SQLite local
 DATABASE_URL = os.environ.get("DATABASE_URL")
 DB_LOCAL = "sella.db"
+ZONA_MADRID = ZoneInfo("Europe/Madrid")
 
 def get_db_connection():
     if DATABASE_URL:
-        # En la nube usa PostgreSQL permanente (Neon)
-        # Corrección de protocolo para psycopg2
         url = DATABASE_URL.replace("postgres://", "postgresql://")
         return psycopg2.connect(url)
     else:
-        # En local usa SQLite
         return sqlite3.connect(DB_LOCAL)
 
 def init_db():
@@ -55,7 +53,7 @@ def index():
 @app.route("/api/canoa", methods=["POST"])
 def registrar_canoa():
     data = request.get_json(silent=True) or {}
-    timestamp_str = data.get("timestamp", datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+    timestamp_str = data.get("timestamp", datetime.now(ZONA_MADRID).strftime("%Y-%m-%d %H:%M:%S"))
     canoe_id = data.get("canoe_id", 0)
 
     try:
@@ -74,7 +72,7 @@ def registrar_canoa():
 
 @app.route("/api/stats")
 def obtener_estadisticas():
-    now = datetime.now()
+    now = datetime.now(ZONA_MADRID)
     hoy_str = now.strftime("%Y-%m-%d")
     mes_str = now.strftime("%Y-%m")
     ano_str = now.strftime("%Y")
@@ -94,7 +92,7 @@ def obtener_estadisticas():
         except Exception:
             pass
 
-    # Distribución 5 min
+    # Distribución 5 min de hoy
     intervalos = defaultdict(int)
     for dt in timestamps_hoy:
         bloque_min = (dt.minute // 5) * 5
@@ -128,7 +126,7 @@ def obtener_estadisticas():
         elif i == 36: sismografo_labels[i] = "-1h"
         elif i == num_slots - 1: sismografo_labels[i] = "Ahora"
 
-    # 2. DATOS HISTÓRICOS
+    # 2. ACUMULADOS MES Y AÑO
     query_mes = "SELECT COUNT(*) FROM canoas WHERE timestamp LIKE %s" if DATABASE_URL else "SELECT COUNT(*) FROM canoas WHERE timestamp LIKE ?"
     cursor.execute(query_mes, (f"{mes_str}%",))
     total_mes = cursor.fetchone()[0]
@@ -137,7 +135,7 @@ def obtener_estadisticas():
     cursor.execute(query_ano, (f"{ano_str}%",))
     total_ano = cursor.fetchone()[0]
 
-    # Desglose por Días
+    # 3. HISTÓRICO: TODOS LOS DÍAS
     cursor.execute("""
         SELECT substr(timestamp, 1, 10) as dia, COUNT(*) as total 
         FROM canoas 
@@ -145,11 +143,36 @@ def obtener_estadisticas():
         ORDER BY dia ASC
     """)
     rows_dias = cursor.fetchall()
+
+    # 4. HISTÓRICO: AGRUPADO POR MESES (YYYY-MM)
+    cursor.execute("""
+        SELECT substr(timestamp, 1, 7) as mes, COUNT(*) as total 
+        FROM canoas 
+        GROUP BY mes 
+        ORDER BY mes ASC
+    """)
+    rows_meses = cursor.fetchall()
+
+    # 5. HISTÓRICO: AGRUPADO POR AÑOS (YYYY)
+    cursor.execute("""
+        SELECT substr(timestamp, 1, 4) as ano, COUNT(*) as total 
+        FROM canoas 
+        GROUP BY ano 
+        ORDER BY ano ASC
+    """)
+    rows_anos = cursor.fetchall()
+
     cursor.close()
     conn.close()
 
     hist_dias = [str(r[0]) for r in rows_dias]
-    hist_totales = [int(r[1]) for r in rows_dias]
+    hist_totales_dias = [int(r[1]) for r in rows_dias]
+
+    hist_meses = [str(r[0]) for r in rows_meses]
+    hist_totales_meses = [int(r[1]) for r in rows_meses]
+
+    hist_anos = [str(r[0]) for r in rows_anos]
+    hist_totales_anos = [int(r[1]) for r in rows_anos]
 
     record_dia = "Sin datos"
     if rows_dias:
@@ -158,17 +181,24 @@ def obtener_estadisticas():
         record_dia = f"{dia_max[1]} canoas ({dt_record})"
 
     return jsonify({
+        # Hoy
         "total_hoy": total_hoy,
         "hora_punta": hora_punta,
         "tramos": tramos,
         "conteos": conteos,
         "sismografo_labels": sismografo_labels,
         "sismografo_conteos": sismografo_conteos,
+        # Tarjetas Récords
         "record_dia": record_dia,
         "total_mes": total_mes,
         "total_ano": total_ano,
+        # Gráficas Históricas
         "hist_dias": hist_dias,
-        "hist_totales": hist_totales
+        "hist_totales_dias": hist_totales_dias,
+        "hist_meses": hist_meses,
+        "hist_totales_meses": hist_totales_meses,
+        "hist_anos": hist_anos,
+        "hist_totales_anos": hist_totales_anos
     })
 
 @app.route("/api/reset", methods=["POST"])
@@ -178,7 +208,7 @@ def reset_counter():
     password = data.get("password")
 
     if username == "admin" and password == "arriondas":
-        hoy_str = datetime.now().strftime("%Y-%m-%d")
+        hoy_str = datetime.now(ZONA_MADRID).strftime("%Y-%m-%d")
         conn = get_db_connection()
         cursor = conn.cursor()
         query_del = "DELETE FROM canoas WHERE timestamp LIKE %s" if DATABASE_URL else "DELETE FROM canoas WHERE timestamp LIKE ?"

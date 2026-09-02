@@ -4,14 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Canoe Counter Sella — Monitorización & Histórico</title>
-    <!-- TailwindCSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased">
 
-    <!-- HEADER CON PESTAÑAS -->
+    <!-- HEADER CON SELECTOR DE VISTAS -->
     <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur sticky top-0 z-40">
         <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
             <div class="flex items-center gap-3">
@@ -24,7 +22,6 @@
                 </div>
             </div>
             
-            <!-- SELECTOR DE PESTAÑAS -->
             <div class="flex items-center gap-2 bg-slate-950/80 p-1.5 rounded-xl border border-slate-800">
                 <button id="tab-btn-live" onclick="switchTab('live')" class="px-4 py-2 rounded-lg text-xs font-bold transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg">
                     🔴 En Directo
@@ -45,16 +42,15 @@
     <main class="max-w-7xl mx-auto px-4 py-8 space-y-8">
 
         <!-- ============================================================= -->
-        <!-- PESTAÑA 1: EN DIRECTO (VISTA HOY) -->
+        <!-- PESTAÑA 1: EN DIRECTO -->
         <!-- ============================================================= -->
         <div id="view-live" class="space-y-8">
-            <!-- TARJETAS DE MÉTRICAS HOY -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-lg">
                     <div class="absolute -right-4 -bottom-4 text-7xl opacity-5 select-none">🛶</div>
                     <p class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Canoas Hoy</p>
                     <h3 id="stat-total" class="text-5xl font-black text-cyan-400 mt-2 tracking-tight">0</h3>
-                    <p class="text-xs text-slate-500 mt-2">Reinicio automático a las 23:59h</p>
+                    <p class="text-xs text-slate-500 mt-2">Horario oficial: 08:00h a 15:00h</p>
                 </div>
 
                 <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-lg">
@@ -72,7 +68,6 @@
                 </div>
             </div>
 
-            <!-- SECCIÓN PRINCIPAL: WEBCAM + GRÁFICAS HOY -->
             <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
                 <div class="lg:col-span-6 bg-slate-900/90 border border-slate-800 rounded-2xl p-5 flex flex-col shadow-xl">
                     <div class="flex items-center justify-between mb-3">
@@ -86,7 +81,7 @@
                     <div class="relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-inner flex items-center justify-center">
                         <iframe src="https://rtsp.me/embed/k52QeyES/" frameborder="0" allowfullscreen class="w-full h-full object-cover"></iframe>
                     </div>
-                    <p class="text-xs text-slate-500 mt-3">🛰️ Emisión oficial de Arriondas gentileza de Jaire Aventura.</p>
+                    <p class="text-xs text-slate-500 mt-3">🛰️ Emisión oficial de Arriondas sincronizada con IA.</p>
                 </div>
 
                 <div class="lg:col-span-6 space-y-6">
@@ -120,10 +115,10 @@
         </div>
 
         <!-- ============================================================= -->
-        <!-- PESTAÑA 2: HISTÓRICO Y RÉCORDS -->
+        <!-- PESTAÑA 2: HISTÓRICO Y RÉCORDS MULTINIVEL -->
         <!-- ============================================================= -->
         <div id="view-history" class="space-y-8 hidden">
-            <!-- TARJETAS DE RÉCORDS Y ACUMULADOS -->
+            <!-- TARJETAS DE RÉCORDS -->
             <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
                 <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 relative overflow-hidden shadow-lg">
                     <div class="absolute -right-4 -bottom-4 text-7xl opacity-5 select-none">🏆</div>
@@ -147,15 +142,31 @@
                 </div>
             </div>
 
-            <!-- GRÁFICA DE EVOLUCIÓN DÍA A DÍA -->
-            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                        <span>📈</span> Evolución de Canoas Día a Día
-                    </h2>
-                    <span class="text-xs text-slate-500">Histórico completo</span>
+            <!-- PANEL DE GRÁFICA HISTÓRICA CON BOTONES DE FILTRO -->
+            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
+                <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
+                    <div>
+                        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                            <span>📈</span> Evolución Histórica del Descenso
+                        </h2>
+                        <p class="text-xs text-slate-500">Selecciona el nivel de agregación temporal</p>
+                    </div>
+
+                    <!-- BOTONES DE FILTRO DE HISTÓRICO -->
+                    <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                        <button id="btn-hist-dias" onclick="setHistoryFilter('dias')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition-all">
+                            🌐 Todos los Días
+                        </button>
+                        <button id="btn-hist-meses" onclick="setHistoryFilter('meses')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-all">
+                            📅 Por Meses
+                        </button>
+                        <button id="btn-hist-anos" onclick="setHistoryFilter('anos')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-all">
+                            🌟 Por Años
+                        </button>
+                    </div>
                 </div>
-                <div class="relative w-full h-[320px]">
+
+                <div class="relative w-full h-[340px]">
                     <canvas id="chartHistory"></canvas>
                 </div>
             </div>
@@ -170,15 +181,15 @@
                 <h3 class="text-base font-bold text-slate-100 flex items-center gap-2"><span>⚠️</span> Reiniciar Contador de Hoy</h3>
                 <button onclick="closeResetModal()" class="text-slate-400 hover:text-slate-200 text-lg">&times;</button>
             </div>
-            <p class="text-xs text-slate-400">Pone a 0 el marcador de hoy sin borrar el histórico de días anteriores:</p>
+            <p class="text-xs text-slate-400">Pone a 0 el marcador de hoy sin tocar el histórico:</p>
             <div class="space-y-3">
                 <div>
                     <label class="text-[11px] font-bold uppercase text-slate-400">Usuario</label>
-                    <input id="admin-user" type="text" placeholder="user" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500 mt-1">
+                    <input id="admin-user" type="text" placeholder="admin" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500 mt-1">
                 </div>
                 <div>
                     <label class="text-[11px] font-bold uppercase text-slate-400">Contraseña</label>
-                    <input id="admin-pass" type="password" placeholder="password" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500 mt-1">
+                    <input id="admin-pass" type="password" placeholder="arriondas" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-sm text-slate-100 focus:outline-none focus:border-cyan-500 mt-1">
                 </div>
             </div>
             <div id="modal-error" class="text-xs text-rose-400 font-semibold hidden"></div>
@@ -191,15 +202,18 @@
 
     <!-- FOOTER -->
     <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
-        <p>Canoe Counter Sella — Plataforma de Monitorización Fluvial.</p>
+        <p>Canoe Counter Sella — Plataforma de Monitorización Fluvial con IA.</p>
         <p class="mt-1">Arriondas, Asturias.</p>
     </footer>
 
-    <!-- CHART.JS & CONTROLADORES -->
+    <!-- SCRIPTS -->
     <script>
         let chartInstance = null;
         let sismografoInstance = null;
         let chartHistoryInstance = null;
+        
+        let currentHistoryMode = 'dias';
+        let rawHistoryData = { dias: [], totales_dias: [], meses: [], totales_meses: [], anos: [], totales_anos: [] };
 
         function initCharts() {
             // 1. Barras de Hoy
@@ -215,15 +229,15 @@
             sismografoInstance = new Chart(ctxSismo, {
                 type: 'line',
                 data: { labels: Array(48).fill(''), datasets: [{ label: 'Ritmo', data: Array(48).fill(0), borderColor: '#ef4444', borderWidth: 2.5, backgroundColor: 'rgba(239, 68, 68, 0.20)', fill: true, tension: 0.35, pointRadius: 0 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, weight: 'bold' }, maxRotation: 0, callback: (v, i) => [0,12,24,36,47].includes(i) ? ['-4h','-3h','-2h','-1h','Ahora'][[0,12,24,36,47].indexOf(i)] : '' } }, y: { beginAtZero: true, suggestedMax: 3, grid: { color: '#1e293b' }, ticks: { color: '#64748b', stepSize: 1 } } } }
+                options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, weight: 'bold' }, maxRotation: 0, callback: (v, i) => [0,12,24,36,47].includes(i) ? ['-4h','-3h','-2h','-1h','Ahora'][[0,12,24,36,47].indexOf(i)] : '' } }, y: { beginAtZero: true, suggestedMax: 3, grid: { color: '#1e293b' }, ticks: { color: '#64748b', stepSize: 1 } } } }
             });
 
-            // 3. Gráfica Histórica Día a Día
+            // 3. Gráfica Histórica Multinivel
             const ctxHist = document.getElementById('chartHistory').getContext('2d');
             chartHistoryInstance = new Chart(ctxHist, {
                 type: 'bar',
                 data: { labels: [], datasets: [{ label: 'Total Canoas', data: [], backgroundColor: '#3b82f6', hoverBackgroundColor: '#60a5fa', borderRadius: 6 }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#94a3b8' } }, y: { beginAtZero: true, grid: { color: '#1e293b' }, ticks: { color: '#64748b' } } } }
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10 } } }, y: { beginAtZero: true, grid: { color: '#1e293b' }, ticks: { color: '#64748b' } } } }
             });
         }
 
@@ -232,7 +246,6 @@
                 const res = await fetch('/api/stats');
                 const data = await res.json();
 
-                // Datos de Hoy
                 document.getElementById('stat-total').innerText = data.total_hoy;
                 document.getElementById('stat-punta').innerText = data.hora_punta;
 
@@ -247,19 +260,55 @@
                     sismografoInstance.update('none');
                 }
 
-                // Datos Históricos
                 document.getElementById('stat-record').innerText = data.record_dia;
                 document.getElementById('stat-mes').innerText = data.total_mes;
                 document.getElementById('stat-ano').innerText = data.total_ano;
 
-                if (chartHistoryInstance) {
-                    chartHistoryInstance.data.labels = data.hist_dias;
-                    chartHistoryInstance.data.datasets[0].data = data.hist_totales;
-                    chartHistoryInstance.update('none');
-                }
+                rawHistoryData = {
+                    dias: data.hist_dias,
+                    totales_dias: data.hist_totales_dias,
+                    meses: data.hist_meses,
+                    totales_meses: data.hist_totales_meses,
+                    anos: data.hist_anos,
+                    totales_anos: data.hist_totales_anos
+                };
+
+                updateHistoryChart();
             } catch (err) {
                 console.error("Error al actualizar estadísticas:", err);
             }
+        }
+
+        function setHistoryFilter(mode) {
+            currentHistoryMode = mode;
+            ['dias', 'meses', 'anos'].forEach(m => {
+                const btn = document.getElementById(`btn-hist-${m}`);
+                if (m === mode) {
+                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition-all";
+                } else {
+                    btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-all";
+                }
+            });
+            updateHistoryChart();
+        }
+
+        function updateHistoryChart() {
+            if (!chartHistoryInstance) return;
+
+            if (currentHistoryMode === 'dias') {
+                chartHistoryInstance.data.labels = rawHistoryData.dias;
+                chartHistoryInstance.data.datasets[0].data = rawHistoryData.totales_dias;
+                chartHistoryInstance.data.datasets[0].backgroundColor = '#3b82f6';
+            } else if (currentHistoryMode === 'meses') {
+                chartHistoryInstance.data.labels = rawHistoryData.meses;
+                chartHistoryInstance.data.datasets[0].data = rawHistoryData.totales_meses;
+                chartHistoryInstance.data.datasets[0].backgroundColor = '#0ea5e9';
+            } else if (currentHistoryMode === 'anos') {
+                chartHistoryInstance.data.labels = rawHistoryData.anos;
+                chartHistoryInstance.data.datasets[0].data = rawHistoryData.totales_anos;
+                chartHistoryInstance.data.datasets[0].backgroundColor = '#8b5cf6';
+            }
+            chartHistoryInstance.update('none');
         }
 
         function switchTab(tab) {
@@ -278,6 +327,7 @@
                 histView.classList.remove('hidden');
                 histBtn.className = "px-4 py-2 rounded-lg text-xs font-bold transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg";
                 liveBtn.className = "px-4 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-all";
+                updateHistoryChart();
             }
         }
 
