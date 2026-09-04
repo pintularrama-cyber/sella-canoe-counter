@@ -115,7 +115,7 @@
         </div>
 
         <!-- ============================================================= -->
-        <!-- PESTAÑA 2: HISTÓRICO Y RÉCORDS MULTINIVEL -->
+        <!-- PESTAÑA 2: HISTÓRICO Y RÉCORDS CON NAVEGADOR -->
         <!-- ============================================================= -->
         <div id="view-history" class="space-y-8 hidden">
             <!-- TARJETAS DE RÉCORDS -->
@@ -142,27 +142,46 @@
                 </div>
             </div>
 
-            <!-- PANEL DE GRÁFICA HISTÓRICA CON BOTONES DE FILTRO -->
+            <!-- PANEL DE GRÁFICA HISTÓRICA CON NAVEGADORES DESPLEGABLES -->
             <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-4">
                 <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800 pb-4">
                     <div>
-                        <h2 class="text-sm font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                        <h2 id="history-chart-title" class="text-sm font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
                             <span>📈</span> Evolución Histórica del Descenso
                         </h2>
-                        <p class="text-xs text-slate-500">Selecciona el nivel de agregación temporal</p>
+                        <p id="history-chart-sub" class="text-xs text-slate-500">Selecciona el rango de fechas</p>
                     </div>
 
-                    <!-- BOTONES DE FILTRO DE HISTÓRICO -->
-                    <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
-                        <button id="btn-hist-dias" onclick="setHistoryFilter('dias')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition-all">
-                            🌐 Todos los Días
-                        </button>
-                        <button id="btn-hist-meses" onclick="setHistoryFilter('meses')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-all">
-                            📅 Por Meses
-                        </button>
-                        <button id="btn-hist-anos" onclick="setHistoryFilter('anos')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-all">
-                            🌟 Por Años
-                        </button>
+                    <!-- BOTONES PRINCIPALES + SELECTORES DESPLEGABLES -->
+                    <div class="flex flex-wrap items-center gap-3">
+                        <!-- Selector de Mes (Solo visible en modo Días) -->
+                        <div id="wrapper-month-select" class="flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+                            <span class="text-xs text-slate-400 font-bold">Mes:</span>
+                            <select id="select-month" onchange="onSubFilterChange()" class="bg-transparent text-xs font-bold text-cyan-400 focus:outline-none cursor-pointer">
+                                <option value="all" class="bg-slate-900 text-slate-200">Todos los días</option>
+                            </select>
+                        </div>
+
+                        <!-- Selector de Año (Solo visible en modo Meses) -->
+                        <div id="wrapper-year-select" class="hidden flex items-center gap-1.5 bg-slate-950 px-3 py-1.5 rounded-xl border border-slate-800">
+                            <span class="text-xs text-slate-400 font-bold">Año:</span>
+                            <select id="select-year" onchange="onSubFilterChange()" class="bg-transparent text-xs font-bold text-cyan-400 focus:outline-none cursor-pointer">
+                                <option value="all" class="bg-slate-900 text-slate-200">Todos los años</option>
+                            </select>
+                        </div>
+
+                        <!-- Botones de Nivel -->
+                        <div class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+                            <button id="btn-hist-dias" onclick="setHistoryMode('dias')" class="px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white transition-all">
+                                📅 Por Días
+                            </button>
+                            <button id="btn-hist-meses" onclick="setHistoryMode('meses')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-all">
+                                🗓️ Por Meses
+                            </button>
+                            <button id="btn-hist-anos" onclick="setHistoryMode('anos')" class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-all">
+                                🌟 Por Años
+                            </button>
+                        </div>
                     </div>
                 </div>
 
@@ -212,11 +231,17 @@
         let sismografoInstance = null;
         let chartHistoryInstance = null;
         
-        let currentHistoryMode = 'dias';
-        let rawHistoryData = { dias: [], totales_dias: [], meses: [], totales_meses: [], anos: [], totales_anos: [] };
+        let currentMode = 'dias'; // 'dias', 'meses', 'anos'
+        let rawData = { dias: [], totales_dias: [], meses: [], totales_meses: [], anos: [], totales_anos: [] };
+
+        const MESES_ES = {
+            '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril',
+            '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto',
+            '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
+        };
 
         function initCharts() {
-            // 1. Barras de Hoy
+            // 1. Barras Hoy
             const ctxBars = document.getElementById('chartSella').getContext('2d');
             chartInstance = new Chart(ctxBars, {
                 type: 'bar',
@@ -232,7 +257,7 @@
                 options: { responsive: true, maintainAspectRatio: false, animation: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { color: '#94a3b8', font: { size: 10, weight: 'bold' }, maxRotation: 0, callback: (v, i) => [0,12,24,36,47].includes(i) ? ['-4h','-3h','-2h','-1h','Ahora'][[0,12,24,36,47].indexOf(i)] : '' } }, y: { beginAtZero: true, suggestedMax: 3, grid: { color: '#1e293b' }, ticks: { color: '#64748b', stepSize: 1 } } } }
             });
 
-            // 3. Gráfica Histórica Multinivel
+            // 3. Gráfica Histórica
             const ctxHist = document.getElementById('chartHistory').getContext('2d');
             chartHistoryInstance = new Chart(ctxHist, {
                 type: 'bar',
@@ -264,23 +289,50 @@
                 document.getElementById('stat-mes').innerText = data.total_mes;
                 document.getElementById('stat-ano').innerText = data.total_ano;
 
-                rawHistoryData = {
-                    dias: data.hist_dias,
-                    totales_dias: data.hist_totales_dias,
-                    meses: data.hist_meses,
-                    totales_meses: data.hist_totales_meses,
-                    anos: data.hist_anos,
-                    totales_anos: data.hist_totales_anos
+                rawData = {
+                    dias: data.hist_dias || [],
+                    totales_dias: data.hist_totales_dias || [],
+                    meses: data.hist_meses || [],
+                    totales_meses: data.hist_totales_meses || [],
+                    anos: data.hist_anos || [],
+                    totales_anos: data.hist_totales_anos || []
                 };
 
-                updateHistoryChart();
+                populateDropdowns();
+                updateHistoryView();
             } catch (err) {
                 console.error("Error al actualizar estadísticas:", err);
             }
         }
 
-        function setHistoryFilter(mode) {
-            currentHistoryMode = mode;
+        // Rellenar selectores de Meses y Años
+        function populateDropdowns() {
+            const selectMonth = document.getElementById('select-month');
+            const selectYear = document.getElementById('select-year');
+            const currentSelectedMonth = selectMonth.value;
+            const currentSelectedYear = selectYear.value;
+
+            // 1. Desplegable de Meses (YYYY-MM)
+            const uniqueMonths = [...new Set(rawData.dias.map(d => d.substring(0, 7)))];
+            selectMonth.innerHTML = '<option value="all" class="bg-slate-900 text-slate-200">🌐 Todos los días</option>';
+            uniqueMonths.forEach(m => {
+                const [year, month] = m.split('-');
+                const monthName = MESES_ES[month] || month;
+                selectMonth.innerHTML += `<option value="${m}" class="bg-slate-900 text-slate-200">${monthName} ${year}</option>`;
+            });
+            if (uniqueMonths.includes(currentSelectedMonth)) selectMonth.value = currentSelectedMonth;
+
+            // 2. Desplegable de Años (YYYY)
+            const uniqueYears = [...new Set(rawData.meses.map(m => m.substring(0, 4)))];
+            selectYear.innerHTML = '<option value="all" class="bg-slate-900 text-slate-200">🌐 Todos los años</option>';
+            uniqueYears.forEach(y => {
+                selectYear.innerHTML += `<option value="${y}" class="bg-slate-900 text-slate-200">Año ${y}</option>`;
+            });
+            if (uniqueYears.includes(currentSelectedYear)) selectYear.value = currentSelectedYear;
+        }
+
+        function setHistoryMode(mode) {
+            currentMode = mode;
             ['dias', 'meses', 'anos'].forEach(m => {
                 const btn = document.getElementById(`btn-hist-${m}`);
                 if (m === mode) {
@@ -289,25 +341,94 @@
                     btn.className = "px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-all";
                 }
             });
-            updateHistoryChart();
+
+            // Mostrar/Ocultar selectores según el modo
+            const monthWrap = document.getElementById('wrapper-month-select');
+            const yearWrap = document.getElementById('wrapper-year-select');
+
+            if (mode === 'dias') {
+                monthWrap.classList.remove('hidden');
+                yearWrap.classList.add('hidden');
+            } else if (mode === 'meses') {
+                monthWrap.classList.add('hidden');
+                yearWrap.classList.remove('hidden');
+            } else {
+                monthWrap.classList.add('hidden');
+                yearWrap.classList.add('hidden');
+            }
+
+            updateHistoryView();
         }
 
-        function updateHistoryChart() {
+        function onSubFilterChange() {
+            updateHistoryView();
+        }
+
+        function updateHistoryView() {
             if (!chartHistoryInstance) return;
 
-            if (currentHistoryMode === 'dias') {
-                chartHistoryInstance.data.labels = rawHistoryData.dias;
-                chartHistoryInstance.data.datasets[0].data = rawHistoryData.totales_dias;
-                chartHistoryInstance.data.datasets[0].backgroundColor = '#3b82f6';
-            } else if (currentHistoryMode === 'meses') {
-                chartHistoryInstance.data.labels = rawHistoryData.meses;
-                chartHistoryInstance.data.datasets[0].data = rawHistoryData.totales_meses;
-                chartHistoryInstance.data.datasets[0].backgroundColor = '#0ea5e9';
-            } else if (currentHistoryMode === 'anos') {
-                chartHistoryInstance.data.labels = rawHistoryData.anos;
-                chartHistoryInstance.data.datasets[0].data = rawHistoryData.totales_anos;
-                chartHistoryInstance.data.datasets[0].backgroundColor = '#8b5cf6';
+            let labels = [];
+            let values = [];
+            let barColor = '#3b82f6';
+            const title = document.getElementById('history-chart-title');
+            const sub = document.getElementById('history-chart-sub');
+
+            if (currentMode === 'dias') {
+                const selMonth = document.getElementById('select-month').value;
+                if (selMonth === 'all') {
+                    labels = rawData.dias;
+                    values = rawData.totales_dias;
+                    title.innerHTML = `<span>📈</span> Evolución de Todos los Días Registrados`;
+                    sub.innerText = `Mostrando la secuencia diaria completa`;
+                } else {
+                    const [year, month] = selMonth.split('-');
+                    const monthName = MESES_ES[month] || month;
+                    // Filtrar solo los días de ese mes
+                    rawData.dias.forEach((d, idx) => {
+                        if (d.startsWith(selMonth)) {
+                            labels.push(`Día ${d.substring(8, 10)}`);
+                            values.push(rawData.totales_dias[idx]);
+                        }
+                    });
+                    title.innerHTML = `<span>📅</span> Desglose Diario: ${monthName} ${year}`;
+                    sub.innerText = `Canoas contadas día a día en ${monthName}`;
+                }
+                barColor = '#3b82f6';
+
+            } else if (currentMode === 'meses') {
+                const selYear = document.getElementById('select-year').value;
+                if (selYear === 'all') {
+                    labels = rawData.meses.map(m => {
+                        const [y, mon] = m.split('-');
+                        return `${(MESES_ES[mon] || mon).substring(0,3)} ${y}`;
+                    });
+                    values = rawData.totales_meses;
+                    title.innerHTML = `<span>🗓️</span> Comparativa de Todos los Meses`;
+                    sub.innerText = `Totales acumulados mes a mes`;
+                } else {
+                    rawData.meses.forEach((m, idx) => {
+                        if (m.startsWith(selYear)) {
+                            const mon = m.split('-')[1];
+                            labels.push(MESES_ES[mon] || mon);
+                            values.push(rawData.totales_meses[idx]);
+                        }
+                    });
+                    title.innerHTML = `<span>🗓️</span> Evolución Mensual del Año ${selYear}`;
+                    sub.innerText = `Temporada ${selYear} mes a mes`;
+                }
+                barColor = '#0ea5e9';
+
+            } else if (currentMode === 'anos') {
+                labels = rawData.anos.map(a => `Año ${a}`);
+                values = rawData.totales_anos;
+                title.innerHTML = `<span>🌟</span> Comparativa de Temporadas (Año a Año)`;
+                sub.innerText = `Total acumulado por cada año completo`;
+                barColor = '#8b5cf6';
             }
+
+            chartHistoryInstance.data.labels = labels;
+            chartHistoryInstance.data.datasets[0].data = values;
+            chartHistoryInstance.data.datasets[0].backgroundColor = barColor;
             chartHistoryInstance.update('none');
         }
 
@@ -327,7 +448,7 @@
                 histView.classList.remove('hidden');
                 histBtn.className = "px-4 py-2 rounded-lg text-xs font-bold transition-all bg-gradient-to-r from-cyan-500 to-blue-600 text-white shadow-lg";
                 liveBtn.className = "px-4 py-2 rounded-lg text-xs font-bold text-slate-400 hover:text-slate-200 transition-all";
-                updateHistoryChart();
+                updateHistoryView();
             }
         }
 
